@@ -345,7 +345,7 @@ const QR_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAZAAAAGQCAIAAAAP
 /* ---------- демо-данные (показываются без Supabase) ---------- */
 const DEMO = {
   settings:{period:"Июнь 2026", month_index:6, min_monthly:1000, show_debts:true,
-    phone:"+79000000000", phone_pretty:"+7 900 000-00-00",
+    phone:"+79264201900", phone_pretty:"+7 926 420-19-00",
     card:"2200000000000000", card_pretty:"2200 0000 0000 0000",
     receiver:"Казначей сбора", qr_text:"https://example.org/moksob"},
   collectedThisMonth:11500,
@@ -377,7 +377,7 @@ const DEMO = {
 };
 
 const banksList=[
-  {short:"С",name:"Сбербанк",color:"#1A9F4B",small:true}
+  {short:"С",name:"Сбербанк",color:"#1A9F4B",small:true,url:"https://www.sberbank.com/sms/pbpn?requisiteNumber=79264201900"}
 ];
 const MONTHS=["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
 const MON3=["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"];
@@ -616,8 +616,8 @@ function renderReq(){
   $("#recVal").textContent=r.receiver||"—";
   $("#copyPhone").onclick=()=>copyText((r.phone||"").replace(/\s/g,""),"Номер скопирован");
   $("#copyCard").onclick=()=>copyText((r.card||"").replace(/\s/g,""),"Карта скопирована");
-  $("#banksBox").innerHTML=banksList.map(b=>`<div class="bank" data-bank="${b.name}" style="${b.small?'grid-column:1/-1':''}"><div class="bdot" style="background:${b.color};color:${b.ink||'#fff'}">${b.short}</div>${b.name}</div>`).join("");
-  document.querySelectorAll("#banksBox .bank").forEach(el=>el.onclick=()=>toast('Откроется приложение «'+el.dataset.bank+'»'));
+  $("#banksBox").innerHTML=banksList.map(b=>`<div class="bank" data-bank="${b.name}" data-url="${b.url||''}" style="${b.small?'grid-column:1/-1':''}"><div class="bdot" style="background:${b.color};color:${b.ink||'#fff'}">${b.short}</div>${b.name}</div>`).join("");
+  document.querySelectorAll("#banksBox .bank").forEach(el=>el.onclick=()=>{const u=el.dataset.url;if(u){window.open(u,"_blank");}else{toast('Откроется приложение «'+el.dataset.bank+'»');}});
   const box=$("#qrbox");box.innerHTML="";
   if(QR_IMAGE){ box.innerHTML='<img alt="QR для перевода" src="'+QR_IMAGE+'">'; }
   else {
