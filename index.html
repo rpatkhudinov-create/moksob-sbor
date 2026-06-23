@@ -240,16 +240,13 @@
       <div id="helpList"></div>
       <div class="row-head"><h3>Цели села</h3><span style="font-size:12px;color:var(--ink-soft)">до 3 · 🔥 приоритетная</span></div>
       <div id="goalSlot"></div>
-      <div class="row-head"><h3>Кто внёс больше всех</h3><a onclick="go('people')">все участники →</a></div>
-      <div class="card feed" id="topHome"></div>
     </section>
 
     <!-- УЧАСТНИКИ -->
     <section class="view" id="view-people">
       <div class="eyebrow" id="peopleEyebrow">Участники сбора</div>
       <div class="seg" id="peopleSeg">
-        <button class="on" data-p="top">Топ‑20</button>
-        <button data-p="due">Не оплатили</button>
+        <button class="on" data-p="due">Не оплатили</button>
         <button data-p="all">Все: А–Я</button>
       </div>
       <div id="peopleBody"></div>
@@ -395,7 +392,7 @@ const fmtDate=d=>{if(!d)return"";const p=(""+d).split("-");return p.length===3?`
 
 /* ---------- состояние ---------- */
 let store={members:[],payments:[],expenses:[],goals:[],settings:{}};
-let session=null, D=null, peopleMode="top", currentView="home";
+let session=null, D=null, peopleMode="due", currentView="home";
 const DEMO_PIN="122798"; let demoUnlocked=false;   // демо-пароль админки (знаете только вы)
 
 /* ---------- загрузка данных ---------- */
@@ -456,7 +453,7 @@ function refresh(){
   $("#periodLbl").textContent=(D.s.period||"общий сбор")+" · общий сбор";
   $("#peopleEyebrow").textContent="Участники сбора · "+(D.s.period||"");
   $("#statsEyebrow").textContent="Отчёт сбора · "+(D.s.period||"");
-  renderHero(); renderHelp(); renderGoals(); renderTopHome();
+  renderHero(); renderHelp(); renderGoals();
   if(currentView==="people") renderPeople();
   if(currentView==="stats") renderStats();
   if(currentView==="req") renderReq();
@@ -541,29 +538,34 @@ function renderTopHome(){
 /* ---------- УЧАСТНИКИ ---------- */
 function renderPeople(){
   const M=D.members;
-  if(peopleMode==="top"){
-    const sorted=[...M].sort((a,b)=>b.paid-a.paid).slice(0,20);const medals=["🥇","🥈","🥉"];
-    $("#peopleBody").innerHTML=`<div class="card">${sorted.map((m,i)=>{const s=statusOf(m);
-      return `<div class="prow"><div class="rank ${i<3?'top':''}">${i<3?medals[i]:i+1}</div>
-        <div class="av" style="background:${colorFor(m.name)}">${initials(m.name)}</div>
-        <div class="nm"><b>${esc(m.name)}</b><span class="tag ${s.cls}">${s.t}</span></div>
-        <div class="sm">${money(m.paid)}</div></div>`;}).join("")}</div>
-      <p class="note">Топ‑20 по вкладу. Спасибо каждому, кто держит сбор Моксоба 🤝</p>`;
-  }else if(peopleMode==="all"){
+  const isAdmin=!!session||demoUnlocked;
+  if(!isAdmin){
+    $("#peopleSeg").style.display="none";
+    const owe=D.owing.length;
+    $("#peopleBody").innerHTML=`
+      <div class="stat-grid">
+        <div class="stat card"><div class="l">Собрано селом за год</div><div class="v">${money(D.collected)}</div><div class="d">${M.length} участников</div></div>
+        <div class="stat card"><div class="l">Сейчас в кассе</div><div class="v">${money(D.balance)}</div><div class="d good">остаток</div></div>
+      </div>
+      ${owe>0?`<div class="due-banner"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#9c5b40" stroke-width="1.7"/><path d="M12 7v6M12 16.5v.5" stroke="#9c5b40" stroke-width="1.7" stroke-linecap="round"/></svg><div><b>${owe} ещё не закрыли месяц</b><p>Осталось внести ${money(D.owedSum)}. Закроем месяц вместе, без спешки 🤝</p></div></div>`:`<div class="card empty-goal"><b>Месяц закрыт 🤲</b>Норму этого месяца внесли все. Спасибо селу.</div>`}
+      <p class="note">Кто сколько внёс — видит только казначей. Без табло долгов, по‑человечески.</p>`;
+    return;
+  }
+  $("#peopleSeg").style.display="";
+  if(peopleMode==="all"){
     const sorted=[...M].sort((a,b)=>a.name.localeCompare(b.name,"ru"));
     $("#peopleBody").innerHTML=`<div class="card">${sorted.map(m=>{const s=statusOf(m);
       return `<div class="prow"><div class="av" style="background:${colorFor(m.name)}">${initials(m.name)}</div>
         <div class="nm"><b>${esc(m.name)}</b><span class="tag ${s.cls}">${s.t}</span></div>
         <div class="sm">${money(m.paid)}</div></div>`;}).join("")}</div>
-      <p class="note">Все ${M.length} участников по алфавиту.</p>`;
+      <p class="note">Только для вас (казначея): все ${M.length} участников по алфавиту.</p>`;
   }else{
-    if(!D.s.show_debts){$("#peopleBody").innerHTML=`<p class="note">Список не оплативших скрыт настройками.</p>`;return;}
     const sorted=[...D.owing].sort((a,b)=>b.debt-a.debt);
     if(!sorted.length){$("#peopleBody").innerHTML=`<div class="card empty-goal"><b>Все молодцы!</b>Норму этого месяца закрыли все участники.</div>`;return;}
     $("#peopleBody").innerHTML=`
       <div class="due-banner">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#A8472F" stroke-width="1.7"/><path d="M12 7v6M12 16.5v.5" stroke="#A8472F" stroke-width="1.7" stroke-linecap="round"/></svg>
-        <div><b>${sorted.length} человек ещё не оплатили</b><p>В сумме осталось внести ${money(D.owedSum)}. Норма — ${money(D.NORM)} (по ${money(D.minMonthly)} в месяц).</p></div>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#9c5b40" stroke-width="1.7"/><path d="M12 7v6M12 16.5v.5" stroke="#9c5b40" stroke-width="1.7" stroke-linecap="round"/></svg>
+        <div><b>${sorted.length} ещё не закрыли месяц</b><p>Только для вас. Осталось ${money(D.owedSum)}. Норма — ${money(D.NORM)}.</p></div>
       </div>
       <div class="card">${sorted.map(m=>`<div class="prow">
         <div class="av" style="background:${colorFor(m.name)}">${initials(m.name)}</div>
@@ -667,15 +669,15 @@ $("#lockBtn").onclick=()=>{
 $("#doLogin").onclick=async()=>{
   if(!LIVE){
     if($("#logPass").value.trim()!==DEMO_PIN){toast("Неверный пароль",true);return;}
-    demoUnlocked=true; $("#logPass").value=""; closeAll(); openAdmin(); return;
+    demoUnlocked=true; $("#logPass").value=""; closeAll(); refresh(); openAdmin(); return;
   }
   const email=$("#logEmail").value.trim(), password=$("#logPass").value;
   if(!email||!password){toast("Введите email и пароль",true);return;}
   const {data,error}=await sb.auth.signInWithPassword({email,password});
   if(error){toast("Не удалось войти: "+error.message,true);return;}
-  session=data.session; closeAll(); toast("Вы вошли"); openAdmin();
+  session=data.session; closeAll(); refresh(); toast("Вы вошли"); openAdmin();
 };
-$("#doLogout").onclick=async()=>{if(!LIVE){demoUnlocked=false;closeAll();toast("Вы вышли из демо-админки");return;}await sb.auth.signOut();session=null;closeAll();setLock();toast("Вы вышли");};
+$("#doLogout").onclick=async()=>{if(!LIVE){demoUnlocked=false;closeAll();refresh();toast("Вы вышли из демо-админки");return;}await sb.auth.signOut();session=null;closeAll();setLock();refresh();toast("Вы вышли");};
 function setLock(){$("#lockBtn").classList.toggle("on",!!session||!LIVE);}
 function openAdmin(){$("#whoEmail").textContent=LIVE?(session?.user?.email||"—"):"демо — изменения не сохранятся";renderAdmin();$("#adminBack").classList.add("show");}
 function demoWrite(fn,msg){ fn(); refresh(); toast((msg||"Готово")+" · демо (не сохранится)"); }
